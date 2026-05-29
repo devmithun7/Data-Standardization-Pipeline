@@ -1,0 +1,27 @@
+PIPELINE PASSED: True
+
+Stages:
+  - resolve_inputs
+  - normalize_and_unify
+  - build_modeling_dataset
+  - validate_modeling_ready
+  - write_outputs
+
+Run metrics:
+  input_pep_rows: 15720
+  input_senior_rows: 3144
+  input_facility_rows: 14690
+  output_rows: 15720
+  output_counties: 3144
+
+Validation metrics:
+  counties: 3144
+  years: 5
+  pop_65_null_rate: 0.0
+  counties_with_min_history: 3144
+
+Errors:
+  (none)
+
+Warnings:
+  (none)

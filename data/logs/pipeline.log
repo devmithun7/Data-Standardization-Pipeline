@@ -1,0 +1,25 @@
+2026-05-28 17:04:41,274 [INFO] unified_dataset_pipeline.pipeline: Loading cleaned inputs from C:\Users\devmi\.cursor\projects\C-Users-devmi-AppData-Local-Temp-61c3a52a-2491-44f0-89d3-ba1b2805382e\senior-living-demand-predictor\data_unification\data\input
+2026-05-28 17:04:42,398 [INFO] unified_dataset_pipeline.pipeline: Copied inputs into C:\Users\devmi\.cursor\projects\C-Users-devmi-AppData-Local-Temp-61c3a52a-2491-44f0-89d3-ba1b2805382e\senior-living-demand-predictor\unified_dataset_pipeline\data\input
+2026-05-28 17:04:42,398 [INFO] unified_dataset_pipeline.pipeline: Stage: normalize demographics and facilities
+2026-05-28 17:04:42,457 [INFO] data_unification.normalizers: Normalized PEP demographics: 15720 rows
+2026-05-28 17:04:42,474 [INFO] data_unification.normalizers: Normalized senior demographics: 3144 counties-years
+2026-05-28 17:04:42,523 [INFO] data_unification.normalizers: Merged demographics: 15720 county-years, 3144 counties
+2026-05-28 17:04:42,699 [INFO] data_unification.normalizers: Normalized facility records: 14690 rows
+2026-05-28 17:04:42,724 [WARNING] data_unification.unify: 463 facilities could not be matched to county FIPS
+2026-05-28 17:04:42,757 [INFO] data_unification.unify: County supply: 2786 counties
+2026-05-28 17:04:42,880 [INFO] data_unification.unify: Unified region panel: 15720 rows, 3144 counties
+2026-05-28 17:04:42,888 [INFO] unified_dataset_pipeline.pipeline: Stage: write staging artifacts
+2026-05-28 17:04:43,149 [INFO] unified_dataset_pipeline.pipeline: Pipeline FAILED: 15720 rows, 3144 counties → modeling_unified_dataset.csv
+2026-05-28 17:04:43,157 [INFO] unified_dataset_pipeline: Done. Outputs in C:\Users\devmi\.cursor\projects\C-Users-devmi-AppData-Local-Temp-61c3a52a-2491-44f0-89d3-ba1b2805382e\senior-living-demand-predictor\unified_dataset_pipeline\data\output | Report: C:\Users\devmi\.cursor\projects\C-Users-devmi-AppData-Local-Temp-61c3a52a-2491-44f0-89d3-ba1b2805382e\senior-living-demand-predictor\unified_dataset_pipeline\data\reports\pipeline_report.txt
+2026-05-28 17:06:17,747 [INFO] unified_dataset_pipeline.pipeline: Loading cleaned inputs from C:\Users\devmi\.cursor\projects\C-Users-devmi-AppData-Local-Temp-61c3a52a-2491-44f0-89d3-ba1b2805382e\senior-living-demand-predictor\unified_dataset_pipeline\data\input
+2026-05-28 17:06:18,201 [INFO] unified_dataset_pipeline.pipeline: Stage: normalize demographics and facilities
+2026-05-28 17:06:18,305 [INFO] data_unification.normalizers: Normalized PEP demographics: 15720 rows
+2026-05-28 17:06:18,321 [INFO] data_unification.normalizers: Normalized senior demographics: 3144 counties-years
+2026-05-28 17:06:18,356 [INFO] data_unification.normalizers: Merged demographics: 15720 county-years, 3144 counties
+2026-05-28 17:06:18,538 [INFO] data_unification.normalizers: Normalized facility records: 14690 rows
+2026-05-28 17:06:18,617 [WARNING] data_unification.unify: 463 facilities could not be matched to county FIPS
+2026-05-28 17:06:18,721 [INFO] data_unification.unify: County supply: 2786 counties
+2026-05-28 17:06:18,808 [INFO] data_unification.unify: Unified region panel: 15720 rows, 3144 counties
+2026-05-28 17:06:18,808 [INFO] unified_dataset_pipeline.pipeline: Stage: write staging artifacts
+2026-05-28 17:06:19,280 [INFO] unified_dataset_pipeline.pipeline: Pipeline PASSED: 15720 rows, 3144 counties → modeling_unified_dataset.csv
+2026-05-28 17:06:19,289 [INFO] unified_dataset_pipeline: Done. Outputs in C:\Users\devmi\.cursor\projects\C-Users-devmi-AppData-Local-Temp-61c3a52a-2491-44f0-89d3-ba1b2805382e\senior-living-demand-predictor\unified_dataset_pipeline\data\output | Report: C:\Users\devmi\.cursor\projects\C-Users-devmi-AppData-Local-Temp-61c3a52a-2491-44f0-89d3-ba1b2805382e\senior-living-demand-predictor\unified_dataset_pipeline\data\reports\pipeline_report.txt

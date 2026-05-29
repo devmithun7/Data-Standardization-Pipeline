@@ -1,0 +1,9 @@
+# Unified dataset pipeline — local configuration
+
+validation:
+  min_counties: 100
+  min_history_years: 3
+  max_null_rate_pop_65: 0.05
+
+# Cleaned inputs: unified_dataset_pipeline/data/input/
+# Fallback: ../data_unification/data/input/
