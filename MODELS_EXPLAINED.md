@@ -282,6 +282,49 @@ Each fact left-joins to `int_synthea__patient_insurance_periods` on `patient_id`
   2. **`union all`** stacks the three streams into one.
   3. **Enrich + dedup:** does the point-in-time patient join, adds the `encounter_key` and `event_date_key`, and keeps `period_match_rank = 1`.
 
+### How the KPIs are grouped out of each fact
+
+Each fact stores **raw, row-level measures**. A KPI is produced by combining an **aggregate function** (`sum` / `count` / `avg`, or a ratio of two sums) with a **`GROUP BY` a dimension**. The dimensions you're allowed to group by are exactly the **foreign keys that fact carries** — so the fact decides which slices are possible.
+
+**`fct_synthea__encounters` — cost & utilization KPIs**
+
+Measures stored: `total_claim_cost`, `encounter_payer_coverage`, `patient_out_of_pocket`, `base_encounter_cost`, `duration_hours`, plus `is_emergency_visit` / `is_inpatient` flags. Group-by slices: patient, provider, organization, payer, date, care_setting.
+
+| KPI | How it's computed | Typical group-by |
+|-----|-------------------|------------------|
+| Encounter volume | `count(distinct encounter_id)` | month × care_setting × payer |
+| Total / avg cost | `sum(total_claim_cost)`, `avg(total_claim_cost)` | month / patient-year / provider |
+| Emergency / inpatient counts | `sum(case when flag='Yes' then 1 else 0 end)` | any slice |
+| Payer coverage % | `sum(coverage) / nullif(sum(total_claim_cost),0)` | month × payer |
+| Avg / max duration | `avg(duration_hours)`, `max(duration_hours)` | month × care_setting |
+
+**`fct_synthea__readmissions` — quality KPIs**
+
+Measures stored: `days_to_readmission`, and the `is_7_day` / `is_30_day` / `is_90_day` / `has_readmission` / `is_same_organization_readmission` flags. Group-by slices: patient, organization, discharge_date, readmit_date. (No payer — borrowed from `fct_encounters`.)
+
+| KPI | How it's computed | Typical group-by |
+|-----|-------------------|------------------|
+| Discharge count (denominator) | `count(distinct index_encounter_id)` | month × diagnosis × payer / provider |
+| 30-day readmissions (numerator) | `sum(case when is_30_day_readmission='Yes' then 1 else 0 end)` | same |
+| **30-day readmission rate** | `100 * numerator / nullif(denominator,0)` | same |
+| Avg days to readmission | `avg(days_to_readmission)` | month / organization |
+
+The signature pattern here is the **ratio KPI**: a `sum` of a flag (numerator) over a `count` of discharges (denominator).
+
+**`fct_synthea__clinical_events` — clinical-activity KPIs**
+
+Measures stored: `event_cost`, `dispense_count`, `duration_days`, plus the `event_type` label and `is_chronic_condition` flag. Group-by slices: patient, encounter, event_date, event_type.
+
+| KPI | How it's computed | Typical group-by |
+|-----|-------------------|------------------|
+| Event counts | `count(*)` | event_type × patient |
+| Chronic condition count | `count(distinct clinical_code)` where chronic | patient |
+| Primary diagnosis (a label, not a sum) | pick one via `row_number()` / `qualify` | per encounter |
+
+This fact is used less for "sum it up" KPIs and more as a **lookup** — e.g. `rpt_synthea__readmission_rate_monthly` filters it to `event_type='condition'` to attach the **primary diagnosis** as a grouping *attribute*.
+
+**The mental model:** each fact holds the raw measures for its grain; its foreign keys define the legal group-by dimensions; KPIs are `sum`/`count`/`avg` of those measures sliced by a dimension; and ratio KPIs are a `sum` of a flag over a `count` of the denominator. Cost KPIs come from the encounter fact, quality KPIs from the readmissions fact, and clinical-activity KPIs from the clinical-events fact — each at its own grain so the aggregates stay correct.
+
 ---
 
 ## Reporting Layer
