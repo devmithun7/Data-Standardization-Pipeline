@@ -203,6 +203,7 @@ These are the small standardizers used all over the staging layer:
 - **What it is:** The patient dimension — but at **one row per insurance period**, not one row per patient (because it's SCD2).
 - **Why:** So a fact can join to the *specific version* of the patient that was valid at the time of the event.
 - **What it calculates / how:** Reads straight from `int_synthea__patient_insurance_periods` and builds the surrogate key `patient_key = md5(patient_id | effective_from)`. Carries demographics, payer, the `effective_from`/`effective_to` dates, `is_current`, and `scd2_version`.
+- **The "Unknown" sentinel member:** the model also `union`s in one extra row with `patient_key = '-1'`, `patient_id = 'UNKNOWN'`. This is the standard Kimball **"Unknown member"** pattern. Encounters whose date falls outside every recorded insurance period are mapped to this row (see the facts below), so facts never carry an unresolved key and patient-grain reports keep those rows instead of inner-joining them away. The sentinel is given non-null `effective_from`/`effective_to`/`is_current`/`payer_id` so it satisfies the dimension's not-null and relationship tests.
 - **Important nuance:** in Synthea, **all periods end up `is_current = 'No'`** (the data is historical), so reports pick the *latest* period per patient rather than filtering on `is_current = 'Yes'`. Also, to count actual people, you must `count(distinct patient_id)`, not count rows.
 
 ### `dim_synthea__date`
@@ -232,6 +233,7 @@ These are the small standardizers used all over the staging layer:
 - **What it is:** The insurance-company dimension — one row per payer.
 - **Why:** Powers all insurance/coverage breakdowns in the reports.
 - **What it calculates / how:** Reads `stg_synthea__payers`, builds `payer_key = md5(payer_id)`, and carries name, HQ address, phone, and revenue. Filters out null payer IDs.
+- **The "Unknown" sentinel member:** also `union`s in one row with `payer_key = '-1'`, `payer_id = 'UNKNOWN'`. This exists so the **Unknown patient** member has a valid payer to point at (the patient dimension's `payer_id` has a relationship test back to this table). Same Kimball "Unknown member" pattern, on the payer side.
 
 ---
 
@@ -244,6 +246,18 @@ These are the small standardizers used all over the staging layer:
 
 **A pattern shared by all three facts — the point-in-time insurance join:**
 Each fact left-joins to `int_synthea__patient_insurance_periods` on `patient_id` **and** a `BETWEEN` on the event date and the period's `effective_from`/`effective_to`. This attaches the insurance period that was active *on the day of the event*. A `row_number()` (`period_match_rank`) plus a final `where period_match_rank = 1` guarantees no row is duplicated if it happens to match more than one period. This is why facts can carry a correct `patient_key` that respects history.
+
+**Handling events with no matching coverage period (the "Unknown" mapping):**
+When an event date falls outside *every* coverage period, the left join finds nothing. Rather than let the key resolve to a meaningless null-derived hash, each fact maps it to the sentinel patient:
+
+```sql
+case
+    when pip.patient_id is null then '-1'
+    else {{ synthea_surrogate_key(['pip.patient_id', 'pip.effective_from']) }}
+end as patient_key
+```
+
+That `'-1'` matches the **"Unknown" member** in `dim_synthea__patient`, so every fact `patient_key` resolves to a real dimension row — the referential-integrity tests pass cleanly, and unmatched events stay countable under "Unknown" instead of silently dropping out of inner-joined reports.
 
 ### `fct_synthea__encounters`
 
@@ -374,8 +388,8 @@ This fact is used less for "sum it up" KPIs and more as a **lookup** — e.g. `r
 - **Why:** Care teams need a prioritized list of high-risk patients to proactively reach out to. This is the most "product-like" report.
 - **What it calculates / how (it combines four sources):**
   1. **`latest_patients` CTE:** picks the **most recent SCD2 row per patient** using `qualify row_number()` (latest period — *not* `is_current`, because of the Synthea nuance).
-  2. **`patient_encounters` CTE:** per patient — total visits, total cost, ED visit count, and the date of the last ED visit.
-  3. **`patient_readmissions` CTE:** per patient — readmission count and last readmission date.
+  2. **`patient_encounters` CTE:** per patient — total visits, total cost, ED visit count, and the date of the last ED visit (`last_ed_visit_date`, exposed as a real `DATE` for BI/dashboard use — not the integer `YYYYMMDD` date-key, which belongs only in fact tables as a join key).
+  3. **`patient_readmissions` CTE:** per patient — readmission count and last readmission date (also a real `DATE`).
   4. **`patient_chronic_conditions` CTE:** per patient — count of distinct still-open conditions, plus a `listagg` of their names into one string.
   5. **`scored` CTE:** computes `age` via `datediff`, then assigns a **`risk_level`** with layered rules:
      - **Very High:** 2+ readmissions, OR 1 readmission *plus* 2+ chronic conditions.
